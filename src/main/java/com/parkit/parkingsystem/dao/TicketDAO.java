@@ -30,7 +30,7 @@ public class TicketDAO {
             ps.setString(2, ticket.getVehicleRegNumber());
             ps.setDouble(3, ticket.getPrice());
             ps.setTimestamp(4, new Timestamp(ticket.getInTime().getTime()));
-            ps.setTimestamp(5, (ticket.getOutTime() == null)?null: (new Timestamp(ticket.getOutTime().getTime())) );
+            ps.setTimestamp(5, (ticket.getOutTime() == null)?null: (new Timestamp(ticket.getOutTime().getTime())));
             return ps.execute();
         }catch (Exception ex){
             logger.error("Error fetching next available slot",ex);
@@ -85,5 +85,48 @@ public class TicketDAO {
             dataBaseConfig.closeConnection(con);
         }
         return false;
+    }
+    
+    public int getNbTicket(String vehicleReg) {
+        Connection con = null;
+        int count = 0; // count the number of times the registration number is found.
+        try {
+            con = dataBaseConfig.getConnection();
+            PreparedStatement ps = con.prepareStatement(DBConstants.GET_NBTICKET);
+            ps.setString(1, vehicleReg); // "1, vehiculeReg" replace the first "?" by the value
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                count = rs.getInt(1); // "1" is the value of our first column "count"
+            }
+            dataBaseConfig.closeResultSet(rs);
+            dataBaseConfig.closePreparedStatement(ps);
+        } catch (Exception ex) {
+            logger.error("Error getting ticket count", ex);
+        } finally {
+            
+            dataBaseConfig.closeConnection(con);
+        }
+        return count;
+    }
+    //test for ParkingDataBaseIt
+    public void inTimetest(String vehicleRegNumber, int minutesBeforeNow) throws Exception {
+        Connection con = null;
+        PreparedStatement ps = null;
+        try {
+            con = dataBaseConfig.getConnection();
+            ps = con.prepareStatement("UPDATE ticket SET in_time = ? WHERE VEHICLE_REG_NUMBER = ?");
+            long millis = System.currentTimeMillis() - (minutesBeforeNow * 60 * 1000);
+            ps.setTimestamp(1, new Timestamp(millis));
+            ps.setString(2, vehicleRegNumber);
+            int updated = ps.executeUpdate();
+            if (updated == 0) {
+                System.out.println("Aucun ticket mis à jour pour la plaque : " + vehicleRegNumber);
+            }
+        } catch (Exception ex) {
+            logger.error("Erreur pendant le shift de inTime", ex);
+        } finally {
+            dataBaseConfig.closePreparedStatement(ps);
+            dataBaseConfig.closeConnection(con);
+        }
     }
 }
